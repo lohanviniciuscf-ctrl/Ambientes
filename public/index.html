@@ -11,81 +11,84 @@
   --card:#112240;
   --accent:#64ffda;
 }
-
 body{
   margin:0;
   font-family:Segoe UI, Arial;
   background:var(--bg);
   color:#e6f1ff;
 }
-
 .center{
   min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
 }
-
-.card{
+.box{
   background:var(--card);
-  padding:25px;
+  padding:20px;
   border-radius:12px;
   width:320px;
   text-align:center;
 }
-
 button,input{
   width:100%;
-  padding:10px;
-  margin:8px 0;
+  padding:8px;
+  margin:5px 0;
   border:none;
   border-radius:6px;
 }
-
 button{
   background:var(--accent);
   font-weight:bold;
   cursor:pointer;
 }
-
-#app{
-  display:none;
-  padding:20px;
-}
-
 header{
-  text-align:center;
-  font-size:20px;
-  margin-bottom:20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
 }
-
+.metrics{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-bottom:10px;
+}
+.metric{
+  background:var(--card);
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+  font-size:14px;
+}
 .board{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:10px;
 }
-
 .column{
   background:var(--card);
   padding:10px;
   border-radius:10px;
 }
-
-.cardLead{
+.lead{
   background:#020c1b;
   padding:8px;
   margin:6px 0;
   border-radius:6px;
+  cursor:grab;
+  font-size:13px;
 }
+small{color:#8892b0}
 </style>
 </head>
 
 <body>
 
-<!-- AMBIENTE -->
+<!-- AMBIENTES -->
 <div id="envSelect" class="center">
-  <div class="card">
-    <h3>Escolha o ambiente</h3>
+  <div class="box">
+    <h3>Ambiente</h3>
     <button onclick="selectEnv('Modelle Skin')">Modelle Skin</button>
     <button onclick="selectEnv('Cia & Arte')">Cia & Arte</button>
   </div>
@@ -93,7 +96,8 @@ header{
 
 <!-- LOGIN -->
 <div id="loginScreen" class="center" style="display:none">
-  <div class="card">
+  <div class="box">
+    <button onclick="backToEnv()">⬅ Voltar</button>
     <h3 id="envTitle"></h3>
     <input id="user" placeholder="Usuário">
     <input id="pass" type="password" placeholder="Senha">
@@ -103,101 +107,129 @@ header{
 </div>
 
 <!-- APP -->
-<div id="app">
-  <header id="appTitle"></header>
+<div id="app" style="display:none;padding:15px">
+<header>
+  <strong id="appTitle"></strong>
+  <button onclick="logout()">Sair</button>
+</header>
 
-  <input id="nome" placeholder="Cliente">
-  <input id="valor" type="number" placeholder="Valor">
-  <input id="custo" type="number" placeholder="Custo">
-  <button onclick="addLead()">Adicionar Lead</button>
+<div class="metrics">
+  <div class="metric">Leads<br><strong id="mLeads">0</strong></div>
+  <div class="metric">Faturamento<br><strong id="mFat">0</strong></div>
+  <div class="metric">Lucro<br><strong id="mLucro">0</strong></div>
+  <div class="metric">No prazo<br><strong id="mPrazo">0</strong></div>
+</div>
 
-  <div class="board" id="board"></div>
+<input id="nome" placeholder="Cliente">
+<input id="valor" type="number" placeholder="Valor">
+<input id="custo" type="number" placeholder="Custo">
+<input id="prazo" type="number" placeholder="Prazo (dias)">
+<button onclick="addLead()">Adicionar</button>
+
+<div class="board" id="board"></div>
 </div>
 
 <script>
 const users={
-  Lohan:{pass:"D9f0da85",env:["Modelle Skin","Cia & Arte"]},
-  marcus:{pass:"Elistray6001",env:["Cia & Arte"]},
-  Queila:{pass:"alieuq79",env:["Modelle Skin"]}
+ Lohan:{pass:"D9f0da85",env:["Modelle Skin","Cia & Arte"]},
+ marcus:{pass:"Elistray6001",env:["Cia & Arte"]},
+ Queila:{pass:"alieuq79",env:["Modelle Skin"]}
 };
 
-let currentEnv=null;
-let currentUser=null;
-const pipeline=["Lead","Em andamento","Proposta","Fechado"];
+let env=null,userAtual=null;
+const etapas=["Lead","Em andamento","Proposta","Fechado"];
+let leads=[];
 
-function selectEnv(env){
-  currentEnv=env;
-  envSelect.style.display="none";
-  loginScreen.style.display="flex";
-  envTitle.innerText=env;
+function selectEnv(e){
+ env=e;
+ envSelect.style.display="none";
+ loginScreen.style.display="flex";
+ envTitle.innerText=e;
+}
 
-  if(env==="Modelle Skin"){
-    document.documentElement.style.setProperty("--bg","#f3e0c8");
-    document.documentElement.style.setProperty("--card","#e6c9a8");
-    document.documentElement.style.setProperty("--accent","#8b5e3c");
-  }
+function backToEnv(){
+ loginScreen.style.display="none";
+ envSelect.style.display="flex";
 }
 
 function login(){
-  const u=user.value;
-  const p=pass.value;
-
-  if(users[u] && users[u].pass===p && users[u].env.includes(currentEnv)){
-    currentUser=u;
-    loginScreen.style.display="none";
-    app.style.display="block";
-    appTitle.innerText=currentEnv+" — "+u;
-    load();
-  }else{
-    loginError.innerText="Login inválido";
-  }
+ if(users[user.value] && users[user.value].pass===pass.value && users[user.value].env.includes(env)){
+   userAtual=user.value;
+   loginScreen.style.display="none";
+   app.style.display="block";
+   appTitle.innerText=env+" — "+userAtual;
+   load();
+ }else loginError.innerText="Login inválido";
 }
 
-let leads=[];
+function logout(){
+ app.style.display="none";
+ loginScreen.style.display="flex";
+}
 
 function load(){
-  leads=JSON.parse(localStorage.getItem(currentEnv+"_"+currentUser))||[];
-  render();
+ leads=JSON.parse(localStorage.getItem(env+"_"+userAtual))||[];
+ render();
 }
 
 function save(){
-  localStorage.setItem(currentEnv+"_"+currentUser,JSON.stringify(leads));
+ localStorage.setItem(env+"_"+userAtual,JSON.stringify(leads));
 }
 
 function addLead(){
-  leads.push({
-    id:Date.now(),
-    nome:nome.value,
-    valor:+valor.value,
-    custo:+custo.value,
-    status:pipeline[0]
-  });
-  save();
-  render();
+ leads.push({
+   id:Date.now(),
+   nome:nome.value,
+   valor:+valor.value,
+   custo:+custo.value,
+   prazo:+prazo.value,
+   criado:Date.now(),
+   status:etapas[0]
+ });
+ save();render();
 }
 
 function render(){
-  board.innerHTML="";
-  pipeline.forEach(s=>{
-    const col=document.createElement("div");
-    col.className="column";
-    col.innerHTML="<h4>"+s+"</h4>";
-    col.ondragover=e=>e.preventDefault();
-    col.ondrop=e=>{
-      leads.find(l=>l.id==e.dataTransfer.getData("id")).status=s;
-      save();render();
-    };
+ board.innerHTML="";
+ let fat=0,luc=0,prazoOk=0;
+ const hoje=Date.now();
 
-    leads.filter(l=>l.status===s).forEach(l=>{
-      const c=document.createElement("div");
-      c.className="cardLead";
-      c.draggable=true;
-      c.ondragstart=e=>e.dataTransfer.setData("id",l.id);
-      c.innerHTML=l.nome+"<br>R$ "+l.valor;
-      col.appendChild(c);
-    });
-    board.appendChild(col);
-  });
+ etapas.forEach(e=>{
+   const col=document.createElement("div");
+   col.className="column";
+   col.innerHTML="<strong>"+e+"</strong>";
+   col.ondragover=x=>x.preventDefault();
+   col.ondrop=x=>{
+     leads.find(l=>l.id==x.dataTransfer.getData("id")).status=e;
+     save();render();
+   };
+
+   leads.filter(l=>l.status===e).forEach(l=>{
+     fat+=l.valor;
+     luc+=(l.valor-l.custo);
+     const diasPassados=Math.floor((hoje-l.criado)/86400000);
+     const restante=l.prazo-diasPassados;
+     if(restante>=0) prazoOk++;
+
+     const d=document.createElement("div");
+     d.className="lead";
+     d.draggable=true;
+     d.ondragstart=x=>x.dataTransfer.setData("id",l.id);
+     d.innerHTML=`
+      <strong>${l.nome}</strong><br>
+      R$ ${l.valor} | Lucro: ${l.valor-l.custo}<br>
+      <small>${restante>=0?"⏳ "+restante+" dias":"⚠️ ATRASADO"}</small>
+     `;
+     col.appendChild(d);
+   });
+
+   board.appendChild(col);
+ });
+
+ mLeads.innerText=leads.length;
+ mFat.innerText="R$ "+fat;
+ mLucro.innerText="R$ "+luc;
+ mPrazo.innerText=prazoOk;
 }
 </script>
 
