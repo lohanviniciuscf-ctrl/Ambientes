@@ -10,26 +10,37 @@
   --bg:#0a192f;
   --card:#112240;
   --accent:#64ffda;
+  --text:#e6f1ff;
 }
+
 body{
   margin:0;
   font-family:Segoe UI, Arial;
   background:var(--bg);
-  color:#e6f1ff;
+  color:var(--text);
 }
+
 button,input{
   padding:7px;
   border:none;
   border-radius:6px;
   margin:4px 0;
 }
-button{background:var(--accent);font-weight:bold;cursor:pointer}
+
+button{
+  background:var(--accent);
+  font-weight:bold;
+  cursor:pointer;
+  color:#000;
+}
+
 .center{
   min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
 }
+
 .box{
   background:var(--card);
   padding:20px;
@@ -37,33 +48,39 @@ button{background:var(--accent);font-weight:bold;cursor:pointer}
   width:320px;
   text-align:center;
 }
+
 header{
   display:flex;
   justify-content:space-between;
   align-items:center;
 }
+
 .metrics,.consolidado{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:10px;
   margin:10px 0;
 }
+
 .metric{
   background:var(--card);
   padding:10px;
   border-radius:10px;
   text-align:center;
 }
+
 .board{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:10px;
 }
+
 .column{
   background:var(--card);
   padding:10px;
   border-radius:10px;
 }
+
 .lead{
   background:#020c1b;
   padding:8px;
@@ -71,10 +88,13 @@ header{
   border-radius:6px;
   font-size:13px;
 }
+
 .atrasado{
   border:2px solid #ff4d4d;
 }
+
 .hidden{display:none}
+small{opacity:.8}
 </style>
 </head>
 
@@ -112,13 +132,8 @@ header{
   </div>
 </header>
 
-<!-- MÉTRICAS -->
 <div id="metrics" class="metrics"></div>
-
-<!-- FORM -->
 <div id="formArea"></div>
-
-<!-- BOARD -->
 <div id="board" class="board"></div>
 
 <!-- CONSOLIDADO MODELLE -->
@@ -126,7 +141,7 @@ header{
   <h3>Consolidado do Mês</h3>
   <div class="consolidado">
     <div class="metric">Pedidos<br><strong id="cPed"></strong></div>
-    <div class="metric">Total Vendido<br><strong id="cTotal"></strong></div>
+    <div class="metric">Total<br><strong id="cTotal"></strong></div>
     <div class="metric">Comissão (1%)<br><strong id="cCom"></strong></div>
   </div>
   <div id="listaMes"></div>
@@ -151,9 +166,10 @@ function selectEnv(e){
  envTitle.innerText=e;
 
  if(e==="Modelle Skin"){
-  document.documentElement.style.setProperty("--bg","#f3e0c8");
-  document.documentElement.style.setProperty("--card","#e6c9a8");
-  document.documentElement.style.setProperty("--accent","#8b5e3c");
+  document.documentElement.style.setProperty("--bg","#f2d9c4");
+  document.documentElement.style.setProperty("--card","#e6c3a5");
+  document.documentElement.style.setProperty("--accent","#000");
+  document.documentElement.style.setProperty("--text","#000");
  }
 }
 
@@ -168,14 +184,12 @@ function login(){
   loginScreen.classList.add("hidden");
   app.classList.remove("hidden");
   appTitle.innerText=env+" — "+userAtual;
-  document.getElementById("btnConsolidado").classList.toggle("hidden",env!=="Modelle Skin");
+  btnConsolidado.classList.toggle("hidden",env!=="Modelle Skin");
   load();
  }else loginError.innerText="Login inválido";
 }
 
-function logout(){
- location.reload();
-}
+function logout(){ location.reload(); }
 
 function load(){
  leads=JSON.parse(localStorage.getItem(env+"_"+userAtual))||[];
@@ -188,7 +202,12 @@ function save(){
 
 function addLead(){
  if(env==="Modelle Skin"){
-  leads.push({id:Date.now(),valor:+valor.value,data:Date.now()});
+  leads.push({
+    id:Date.now(),
+    valor:+valor.value,
+    desc:desc.value,
+    data:Date.now()
+  });
  }else{
   leads.push({
    id:Date.now(),
@@ -216,6 +235,7 @@ function render(){
 
  if(env==="Modelle Skin"){
   formArea.innerHTML=`
+   <input id="desc" placeholder="O que é o pedido">
    <input id="valor" type="number" placeholder="Valor do pedido">
    <button onclick="addLead()">Adicionar Pedido</button>
   `;
@@ -225,18 +245,24 @@ function render(){
 
   metrics.innerHTML=`
    <div class="metric">Pedidos<br><strong>${leads.length}</strong></div>
-   <div class="metric">Total<br><strong>R$ ${total}</strong></div>
+   <div class="metric">Total Vendido<br><strong>R$ ${total}</strong></div>
    <div class="metric">Comissão<br><strong>R$ ${(total*0.01).toFixed(2)}</strong></div>
   `;
 
-  const mesAtual=new Date().getMonth();
-  const mesLeads=leads.filter(l=>new Date(l.data).getMonth()===mesAtual);
+  const mes=new Date().getMonth();
+  const mesLeads=leads.filter(l=>new Date(l.data).getMonth()===mes);
 
   cPed.innerText=mesLeads.length;
   cTotal.innerText="R$ "+mesLeads.reduce((a,b)=>a+b.valor,0);
   cCom.innerText="R$ "+(mesLeads.reduce((a,b)=>a+b.valor,0)*0.01).toFixed(2);
 
-  listaMes.innerHTML=mesLeads.map(l=>`R$ ${l.valor}`).join("<br>");
+  listaMes.innerHTML=mesLeads.map(l=>`
+    <div class="lead">
+      <strong>${l.desc}</strong><br>
+      R$ ${l.valor}<br>
+      <small>${new Date(l.data).toLocaleDateString()}</small>
+    </div>
+  `).join("");
 
  }else{
   formArea.innerHTML=`
