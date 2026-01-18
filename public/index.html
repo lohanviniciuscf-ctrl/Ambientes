@@ -17,6 +17,13 @@ body{
   background:var(--bg);
   color:#e6f1ff;
 }
+button,input{
+  padding:7px;
+  border:none;
+  border-radius:6px;
+  margin:4px 0;
+}
+button{background:var(--accent);font-weight:bold;cursor:pointer}
 .center{
   min-height:100vh;
   display:flex;
@@ -30,36 +37,22 @@ body{
   width:320px;
   text-align:center;
 }
-button,input{
-  width:100%;
-  padding:8px;
-  margin:5px 0;
-  border:none;
-  border-radius:6px;
-}
-button{
-  background:var(--accent);
-  font-weight:bold;
-  cursor:pointer;
-}
 header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:10px;
 }
-.metrics{
+.metrics,.consolidado{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:10px;
-  margin-bottom:10px;
+  margin:10px 0;
 }
 .metric{
   background:var(--card);
   padding:10px;
   border-radius:10px;
   text-align:center;
-  font-size:14px;
 }
 .board{
   display:grid;
@@ -76,26 +69,28 @@ header{
   padding:8px;
   margin:6px 0;
   border-radius:6px;
-  cursor:grab;
   font-size:13px;
 }
-small{color:#8892b0}
+.atrasado{
+  border:2px solid #ff4d4d;
+}
+.hidden{display:none}
 </style>
 </head>
 
 <body>
 
-<!-- AMBIENTES -->
+<!-- AMBIENTE -->
 <div id="envSelect" class="center">
   <div class="box">
-    <h3>Ambiente</h3>
+    <h3>Escolha o ambiente</h3>
     <button onclick="selectEnv('Modelle Skin')">Modelle Skin</button>
     <button onclick="selectEnv('Cia & Arte')">Cia & Arte</button>
   </div>
 </div>
 
 <!-- LOGIN -->
-<div id="loginScreen" class="center" style="display:none">
+<div id="loginScreen" class="center hidden">
   <div class="box">
     <button onclick="backToEnv()">⬅ Voltar</button>
     <h3 id="envTitle"></h3>
@@ -107,26 +102,36 @@ small{color:#8892b0}
 </div>
 
 <!-- APP -->
-<div id="app" style="display:none;padding:15px">
+<div id="app" class="hidden" style="padding:15px">
+
 <header>
   <strong id="appTitle"></strong>
-  <button onclick="logout()">Sair</button>
+  <div>
+    <button id="btnConsolidado" class="hidden" onclick="toggleConsolidado()">📊 Consolidado</button>
+    <button onclick="logout()">Sair</button>
+  </div>
 </header>
 
-<div class="metrics">
-  <div class="metric">Leads<br><strong id="mLeads">0</strong></div>
-  <div class="metric">Faturamento<br><strong id="mFat">0</strong></div>
-  <div class="metric">Lucro<br><strong id="mLucro">0</strong></div>
-  <div class="metric">No prazo<br><strong id="mPrazo">0</strong></div>
+<!-- MÉTRICAS -->
+<div id="metrics" class="metrics"></div>
+
+<!-- FORM -->
+<div id="formArea"></div>
+
+<!-- BOARD -->
+<div id="board" class="board"></div>
+
+<!-- CONSOLIDADO MODELLE -->
+<div id="consolidado" class="hidden">
+  <h3>Consolidado do Mês</h3>
+  <div class="consolidado">
+    <div class="metric">Pedidos<br><strong id="cPed"></strong></div>
+    <div class="metric">Total Vendido<br><strong id="cTotal"></strong></div>
+    <div class="metric">Comissão (1%)<br><strong id="cCom"></strong></div>
+  </div>
+  <div id="listaMes"></div>
 </div>
 
-<input id="nome" placeholder="Cliente">
-<input id="valor" type="number" placeholder="Valor">
-<input id="custo" type="number" placeholder="Custo">
-<input id="prazo" type="number" placeholder="Prazo (dias)">
-<button onclick="addLead()">Adicionar</button>
-
-<div class="board" id="board"></div>
 </div>
 
 <script>
@@ -136,35 +141,40 @@ const users={
  Queila:{pass:"alieuq79",env:["Modelle Skin"]}
 };
 
-let env=null,userAtual=null;
+let env=null,userAtual=null,leads=[];
 const etapas=["Lead","Em andamento","Proposta","Fechado"];
-let leads=[];
 
 function selectEnv(e){
  env=e;
- envSelect.style.display="none";
- loginScreen.style.display="flex";
+ envSelect.classList.add("hidden");
+ loginScreen.classList.remove("hidden");
  envTitle.innerText=e;
+
+ if(e==="Modelle Skin"){
+  document.documentElement.style.setProperty("--bg","#f3e0c8");
+  document.documentElement.style.setProperty("--card","#e6c9a8");
+  document.documentElement.style.setProperty("--accent","#8b5e3c");
+ }
 }
 
 function backToEnv(){
- loginScreen.style.display="none";
- envSelect.style.display="flex";
+ loginScreen.classList.add("hidden");
+ envSelect.classList.remove("hidden");
 }
 
 function login(){
  if(users[user.value] && users[user.value].pass===pass.value && users[user.value].env.includes(env)){
-   userAtual=user.value;
-   loginScreen.style.display="none";
-   app.style.display="block";
-   appTitle.innerText=env+" — "+userAtual;
-   load();
+  userAtual=user.value;
+  loginScreen.classList.add("hidden");
+  app.classList.remove("hidden");
+  appTitle.innerText=env+" — "+userAtual;
+  document.getElementById("btnConsolidado").classList.toggle("hidden",env!=="Modelle Skin");
+  load();
  }else loginError.innerText="Login inválido";
 }
 
 function logout(){
- app.style.display="none";
- loginScreen.style.display="flex";
+ location.reload();
 }
 
 function load(){
@@ -177,7 +187,10 @@ function save(){
 }
 
 function addLead(){
- leads.push({
+ if(env==="Modelle Skin"){
+  leads.push({id:Date.now(),valor:+valor.value,data:Date.now()});
+ }else{
+  leads.push({
    id:Date.now(),
    nome:nome.value,
    valor:+valor.value,
@@ -185,51 +198,90 @@ function addLead(){
    prazo:+prazo.value,
    criado:Date.now(),
    status:etapas[0]
- });
+  });
+ }
  save();render();
 }
 
-function render(){
- board.innerHTML="";
- let fat=0,luc=0,prazoOk=0;
- const hoje=Date.now();
+function toggleConsolidado(){
+ consolidado.classList.toggle("hidden");
+ board.classList.toggle("hidden");
+}
 
- etapas.forEach(e=>{
+function render(){
+ metrics.innerHTML="";
+ formArea.innerHTML="";
+ board.innerHTML="";
+ consolidado.classList.add("hidden");
+
+ if(env==="Modelle Skin"){
+  formArea.innerHTML=`
+   <input id="valor" type="number" placeholder="Valor do pedido">
+   <button onclick="addLead()">Adicionar Pedido</button>
+  `;
+
+  let total=0;
+  leads.forEach(l=>total+=l.valor);
+
+  metrics.innerHTML=`
+   <div class="metric">Pedidos<br><strong>${leads.length}</strong></div>
+   <div class="metric">Total<br><strong>R$ ${total}</strong></div>
+   <div class="metric">Comissão<br><strong>R$ ${(total*0.01).toFixed(2)}</strong></div>
+  `;
+
+  const mesAtual=new Date().getMonth();
+  const mesLeads=leads.filter(l=>new Date(l.data).getMonth()===mesAtual);
+
+  cPed.innerText=mesLeads.length;
+  cTotal.innerText="R$ "+mesLeads.reduce((a,b)=>a+b.valor,0);
+  cCom.innerText="R$ "+(mesLeads.reduce((a,b)=>a+b.valor,0)*0.01).toFixed(2);
+
+  listaMes.innerHTML=mesLeads.map(l=>`R$ ${l.valor}`).join("<br>");
+
+ }else{
+  formArea.innerHTML=`
+   <input id="nome" placeholder="Cliente">
+   <input id="valor" type="number" placeholder="Valor">
+   <input id="custo" type="number" placeholder="Custo">
+   <input id="prazo" type="number" placeholder="Prazo (dias)">
+   <button onclick="addLead()">Adicionar Lead</button>
+  `;
+
+  let atraso=0;
+  etapas.forEach(e=>{
    const col=document.createElement("div");
    col.className="column";
    col.innerHTML="<strong>"+e+"</strong>";
    col.ondragover=x=>x.preventDefault();
    col.ondrop=x=>{
-     leads.find(l=>l.id==x.dataTransfer.getData("id")).status=e;
-     save();render();
+    leads.find(l=>l.id==x.dataTransfer.getData("id")).status=e;
+    save();render();
    };
 
    leads.filter(l=>l.status===e).forEach(l=>{
-     fat+=l.valor;
-     luc+=(l.valor-l.custo);
-     const diasPassados=Math.floor((hoje-l.criado)/86400000);
-     const restante=l.prazo-diasPassados;
-     if(restante>=0) prazoOk++;
+    const dias=Math.floor((Date.now()-l.criado)/86400000);
+    const rest=l.prazo-dias;
+    if(rest<0) atraso++;
 
-     const d=document.createElement("div");
-     d.className="lead";
-     d.draggable=true;
-     d.ondragstart=x=>x.dataTransfer.setData("id",l.id);
-     d.innerHTML=`
-      <strong>${l.nome}</strong><br>
-      R$ ${l.valor} | Lucro: ${l.valor-l.custo}<br>
-      <small>${restante>=0?"⏳ "+restante+" dias":"⚠️ ATRASADO"}</small>
-     `;
-     col.appendChild(d);
+    const d=document.createElement("div");
+    d.className="lead"+(rest<0?" atrasado":"");
+    d.draggable=true;
+    d.ondragstart=x=>x.dataTransfer.setData("id",l.id);
+    d.innerHTML=`
+     ${l.nome}<br>
+     R$ ${l.valor} | Lucro ${l.valor-l.custo}<br>
+     <small>${rest>=0?rest+" dias":"ATRASADO"}</small>
+    `;
+    col.appendChild(d);
    });
-
    board.appendChild(col);
- });
+  });
 
- mLeads.innerText=leads.length;
- mFat.innerText="R$ "+fat;
- mLucro.innerText="R$ "+luc;
- mPrazo.innerText=prazoOk;
+  metrics.innerHTML=`
+   <div class="metric">Leads<br><strong>${leads.length}</strong></div>
+   <div class="metric">Atrasados<br><strong>${atraso}</strong></div>
+  `;
+ }
 }
 </script>
 
