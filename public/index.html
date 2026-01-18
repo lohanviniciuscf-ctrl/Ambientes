@@ -13,6 +13,7 @@
   --text:#e6f1ff;
 }
 
+/* BASE */
 body{
   margin:0;
   font-family:Segoe UI, Arial;
@@ -165,11 +166,12 @@ function selectEnv(e){
  loginScreen.classList.remove("hidden");
  envTitle.innerText=e;
 
+ /* TEMA MODELLE */
  if(e==="Modelle Skin"){
-  document.documentElement.style.setProperty("--bg","#f2d9c4");
-  document.documentElement.style.setProperty("--card","#e6c3a5");
-  document.documentElement.style.setProperty("--accent","#000");
-  document.documentElement.style.setProperty("--text","#000");
+  document.documentElement.style.setProperty("--bg","#f5dcc6");        // pele
+  document.documentElement.style.setProperty("--card","#e2b48c");     // caramelo
+  document.documentElement.style.setProperty("--accent","#c68642");   // caramelo escuro
+  document.documentElement.style.setProperty("--text","#000");        // letras pretas
  }
 }
 
@@ -233,9 +235,10 @@ function render(){
  board.innerHTML="";
  consolidado.classList.add("hidden");
 
+ /* MODELLE */
  if(env==="Modelle Skin"){
   formArea.innerHTML=`
-   <input id="desc" placeholder="O que é o pedido">
+   <input id="desc" placeholder="Descrição do pedido">
    <input id="valor" type="number" placeholder="Valor do pedido">
    <button onclick="addLead()">Adicionar Pedido</button>
   `;
@@ -249,22 +252,36 @@ function render(){
    <div class="metric">Comissão<br><strong>R$ ${(total*0.01).toFixed(2)}</strong></div>
   `;
 
-  const mes=new Date().getMonth();
-  const mesLeads=leads.filter(l=>new Date(l.data).getMonth()===mes);
+  /* CARDS NORMAIS */
+  board.innerHTML=leads.map(l=>`
+    <div class="lead">
+      <strong>${l.desc}</strong><br>
+      Valor: R$ ${l.valor}<br>
+      <small>Data: ${new Date(l.data).toLocaleDateString()}</small>
+    </div>
+  `).join("");
+
+  /* CONSOLIDADO */
+  const mesAtual=new Date().getMonth();
+  const mesLeads=leads.filter(l=>new Date(l.data).getMonth()===mesAtual);
+
+  const totalMes=mesLeads.reduce((a,b)=>a+b.valor,0);
 
   cPed.innerText=mesLeads.length;
-  cTotal.innerText="R$ "+mesLeads.reduce((a,b)=>a+b.valor,0);
-  cCom.innerText="R$ "+(mesLeads.reduce((a,b)=>a+b.valor,0)*0.01).toFixed(2);
+  cTotal.innerText="R$ "+totalMes;
+  cCom.innerText="R$ "+(totalMes*0.01).toFixed(2);
 
   listaMes.innerHTML=mesLeads.map(l=>`
     <div class="lead">
       <strong>${l.desc}</strong><br>
-      R$ ${l.valor}<br>
-      <small>${new Date(l.data).toLocaleDateString()}</small>
+      Valor: R$ ${l.valor}<br>
+      <small>Data: ${new Date(l.data).toLocaleDateString()}</small>
     </div>
   `).join("");
+ }
 
- }else{
+ /* CIA & ARTE */
+ else{
   formArea.innerHTML=`
    <input id="nome" placeholder="Cliente">
    <input id="valor" type="number" placeholder="Valor">
