@@ -13,7 +13,6 @@
   --text:#e6f1ff;
 }
 
-/* BASE */
 body{
   margin:0;
   font-family:Segoe UI, Arial;
@@ -46,9 +45,11 @@ button{
   background:var(--card);
   padding:20px;
   border-radius:12px;
-  width:320px;
+  width:330px;
   text-align:center;
 }
+
+.hidden{display:none}
 
 header{
   display:flex;
@@ -56,9 +57,9 @@ header{
   align-items:center;
 }
 
-.metrics,.consolidado{
+.metrics{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(3,1fr);
   gap:10px;
   margin:10px 0;
 }
@@ -70,32 +71,19 @@ header{
   text-align:center;
 }
 
-.board{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:10px;
-}
-
-.column{
-  background:var(--card);
-  padding:10px;
-  border-radius:10px;
-}
-
 .lead{
-  background:#020c1b;
-  padding:8px;
-  margin:6px 0;
-  border-radius:6px;
-  font-size:13px;
+  background:#fff;
+  color:#000;
+  padding:10px;
+  border-radius:8px;
+  margin:8px 0;
 }
 
-.atrasado{
-  border:2px solid #ff4d4d;
+.lead button{
+  padding:4px 6px;
+  margin:3px;
+  font-size:12px;
 }
-
-.hidden{display:none}
-small{opacity:.8}
 </style>
 </head>
 
@@ -124,30 +112,18 @@ small{opacity:.8}
 
 <!-- APP -->
 <div id="app" class="hidden" style="padding:15px">
-
 <header>
   <strong id="appTitle"></strong>
   <div>
-    <button id="btnConsolidado" class="hidden" onclick="toggleConsolidado()">📊 Consolidado</button>
     <button onclick="logout()">Sair</button>
   </div>
 </header>
 
 <div id="metrics" class="metrics"></div>
+
 <div id="formArea"></div>
-<div id="board" class="board"></div>
 
-<!-- CONSOLIDADO MODELLE -->
-<div id="consolidado" class="hidden">
-  <h3>Consolidado do Mês</h3>
-  <div class="consolidado">
-    <div class="metric">Pedidos<br><strong id="cPed"></strong></div>
-    <div class="metric">Total<br><strong id="cTotal"></strong></div>
-    <div class="metric">Comissão (1%)<br><strong id="cCom"></strong></div>
-  </div>
-  <div id="listaMes"></div>
-</div>
-
+<div id="listaPedidos"></div>
 </div>
 
 <script>
@@ -157,22 +133,20 @@ const users={
  Queila:{pass:"alieuq79",env:["Modelle Skin"]}
 };
 
-let env=null,userAtual=null,leads=[];
-const etapas=["Lead","Em andamento","Proposta","Fechado"];
+let env=null,userAtual=null,pedidos=[];
+
+function applyModelleTheme(){
+ document.documentElement.style.setProperty("--bg","#f5dcc6");
+ document.documentElement.style.setProperty("--card","#e2b48c");
+ document.documentElement.style.setProperty("--accent","#c68642");
+ document.documentElement.style.setProperty("--text","#000");
+}
 
 function selectEnv(e){
  env=e;
  envSelect.classList.add("hidden");
  loginScreen.classList.remove("hidden");
  envTitle.innerText=e;
-
- /* TEMA MODELLE */
- if(e==="Modelle Skin"){
-  document.documentElement.style.setProperty("--bg","#f5dcc6");        // pele
-  document.documentElement.style.setProperty("--card","#e2b48c");     // caramelo
-  document.documentElement.style.setProperty("--accent","#c68642");   // caramelo escuro
-  document.documentElement.style.setProperty("--text","#000");        // letras pretas
- }
 }
 
 function backToEnv(){
@@ -186,145 +160,80 @@ function login(){
   loginScreen.classList.add("hidden");
   app.classList.remove("hidden");
   appTitle.innerText=env+" — "+userAtual;
-  btnConsolidado.classList.toggle("hidden",env!=="Modelle Skin");
-  load();
+
+  if(env==="Modelle Skin") applyModelleTheme();
+
+  pedidos=JSON.parse(localStorage.getItem(env+"_"+userAtual))||[];
+  render();
  }else loginError.innerText="Login inválido";
 }
 
 function logout(){ location.reload(); }
 
-function load(){
- leads=JSON.parse(localStorage.getItem(env+"_"+userAtual))||[];
- render();
-}
-
 function save(){
- localStorage.setItem(env+"_"+userAtual,JSON.stringify(leads));
+ localStorage.setItem(env+"_"+userAtual,JSON.stringify(pedidos));
 }
 
-function addLead(){
- if(env==="Modelle Skin"){
-  leads.push({
-    id:Date.now(),
-    valor:+valor.value,
-    desc:desc.value,
-    data:Date.now()
-  });
- }else{
-  leads.push({
-   id:Date.now(),
-   nome:nome.value,
-   valor:+valor.value,
-   custo:+custo.value,
-   prazo:+prazo.value,
-   criado:Date.now(),
-   status:etapas[0]
-  });
- }
+function addPedido(){
+ pedidos.push({
+  id:Date.now(),
+  desc:desc.value,
+  valor:+valor.value,
+  data:Date.now()
+ });
  save();render();
 }
 
-function toggleConsolidado(){
- consolidado.classList.toggle("hidden");
- board.classList.toggle("hidden");
+function editPedido(id){
+ const p=pedidos.find(x=>x.id===id);
+ const novaDesc=prompt("Descrição:",p.desc);
+ const novoValor=prompt("Valor:",p.valor);
+ if(novaDesc && novoValor){
+  p.desc=novaDesc;
+  p.valor=+novoValor;
+  save();render();
+ }
+}
+
+function delPedido(id){
+ if(confirm("Excluir pedido?")){
+  pedidos=pedidos.filter(p=>p.id!==id);
+  save();render();
+ }
 }
 
 function render(){
  metrics.innerHTML="";
  formArea.innerHTML="";
- board.innerHTML="";
- consolidado.classList.add("hidden");
+ listaPedidos.innerHTML="";
 
- /* MODELLE */
- if(env==="Modelle Skin"){
-  formArea.innerHTML=`
-   <input id="desc" placeholder="Descrição do pedido">
-   <input id="valor" type="number" placeholder="Valor do pedido">
-   <button onclick="addLead()">Adicionar Pedido</button>
+ let total=0;
+ pedidos.forEach(p=>total+=p.valor);
+
+ metrics.innerHTML=`
+  <div class="metric">Pedidos<br><strong>${pedidos.length}</strong></div>
+  <div class="metric">Total<br><strong>R$ ${total}</strong></div>
+  <div class="metric">Comissão (1%)<br><strong>R$ ${(total*0.01).toFixed(2)}</strong></div>
+ `;
+
+ formArea.innerHTML=`
+  <input id="desc" placeholder="Descrição do pedido">
+  <input id="valor" type="number" placeholder="Valor">
+  <button onclick="addPedido()">Adicionar Pedido</button>
+ `;
+
+ pedidos.forEach(p=>{
+  const d=document.createElement("div");
+  d.className="lead";
+  d.innerHTML=`
+   <strong>${p.desc}</strong><br>
+   Valor: R$ ${p.valor}<br>
+   Data: ${new Date(p.data).toLocaleDateString()}<br>
+   <button onclick="editPedido(${p.id})">✏️ Editar</button>
+   <button onclick="delPedido(${p.id})">🗑 Excluir</button>
   `;
-
-  let total=0;
-  leads.forEach(l=>total+=l.valor);
-
-  metrics.innerHTML=`
-   <div class="metric">Pedidos<br><strong>${leads.length}</strong></div>
-   <div class="metric">Total Vendido<br><strong>R$ ${total}</strong></div>
-   <div class="metric">Comissão<br><strong>R$ ${(total*0.01).toFixed(2)}</strong></div>
-  `;
-
-  /* CARDS NORMAIS */
-  board.innerHTML=leads.map(l=>`
-    <div class="lead">
-      <strong>${l.desc}</strong><br>
-      Valor: R$ ${l.valor}<br>
-      <small>Data: ${new Date(l.data).toLocaleDateString()}</small>
-    </div>
-  `).join("");
-
-  /* CONSOLIDADO */
-  const mesAtual=new Date().getMonth();
-  const mesLeads=leads.filter(l=>new Date(l.data).getMonth()===mesAtual);
-
-  const totalMes=mesLeads.reduce((a,b)=>a+b.valor,0);
-
-  cPed.innerText=mesLeads.length;
-  cTotal.innerText="R$ "+totalMes;
-  cCom.innerText="R$ "+(totalMes*0.01).toFixed(2);
-
-  listaMes.innerHTML=mesLeads.map(l=>`
-    <div class="lead">
-      <strong>${l.desc}</strong><br>
-      Valor: R$ ${l.valor}<br>
-      <small>Data: ${new Date(l.data).toLocaleDateString()}</small>
-    </div>
-  `).join("");
- }
-
- /* CIA & ARTE */
- else{
-  formArea.innerHTML=`
-   <input id="nome" placeholder="Cliente">
-   <input id="valor" type="number" placeholder="Valor">
-   <input id="custo" type="number" placeholder="Custo">
-   <input id="prazo" type="number" placeholder="Prazo (dias)">
-   <button onclick="addLead()">Adicionar Lead</button>
-  `;
-
-  let atraso=0;
-  etapas.forEach(e=>{
-   const col=document.createElement("div");
-   col.className="column";
-   col.innerHTML="<strong>"+e+"</strong>";
-   col.ondragover=x=>x.preventDefault();
-   col.ondrop=x=>{
-    leads.find(l=>l.id==x.dataTransfer.getData("id")).status=e;
-    save();render();
-   };
-
-   leads.filter(l=>l.status===e).forEach(l=>{
-    const dias=Math.floor((Date.now()-l.criado)/86400000);
-    const rest=l.prazo-dias;
-    if(rest<0) atraso++;
-
-    const d=document.createElement("div");
-    d.className="lead"+(rest<0?" atrasado":"");
-    d.draggable=true;
-    d.ondragstart=x=>x.dataTransfer.setData("id",l.id);
-    d.innerHTML=`
-     ${l.nome}<br>
-     R$ ${l.valor} | Lucro ${l.valor-l.custo}<br>
-     <small>${rest>=0?rest+" dias":"ATRASADO"}</small>
-    `;
-    col.appendChild(d);
-   });
-   board.appendChild(col);
-  });
-
-  metrics.innerHTML=`
-   <div class="metric">Leads<br><strong>${leads.length}</strong></div>
-   <div class="metric">Atrasados<br><strong>${atraso}</strong></div>
-  `;
- }
+  listaPedidos.appendChild(d);
+ });
 }
 </script>
 
